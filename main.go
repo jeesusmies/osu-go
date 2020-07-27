@@ -18,7 +18,7 @@ func GetKey() string {
 }
 
 func BotInit() *discordgo.Session {
-	discord, err := discordgo.New("Bot " + ""//discord token here)
+	discord, err := discordgo.New("Bot " + "")
 	if err != nil {
 		fmt.Println("Error initialising the bot!")
 	}
@@ -57,7 +57,8 @@ func GetStatus(s string) string {
 	
 	return resp.Status
 }
-
+// This function will be called (due to AddHandler above) every time a new
+// message is created on any channel that the authenticated bot has access to.
 func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
 	content := message.Content
 	args := strings.Fields(content)
@@ -74,23 +75,31 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		player := args[1]
 		api := osuapi.NewClient(GetKey())
 		scores, err := api.GetUserRecent(osuapi.GetUserScoresOpts{
-			Username: "WhiteCat",
+			Username: player,
 			Mode: osuapi.ModeOsu,
 		})
 		if err != nil {
 			fmt.Println("what happened?")
 		}
-		session.ChannelMessageSend(message.ChannelID, "Player : " + player)
-		for _, score := range scores {
-			session.ChannelMessageSend(message.ChannelID, "Full Combo : " + strconv.FormatBool(bool(score.Score.FullCombo)))
-			session.ChannelMessageSend(message.ChannelID, "PP : " + strconv.Itoa(int(score.Score.Score)))
-			session.ChannelMessageSend(message.ChannelID, "PP : " + strconv.Itoa(int(score.Score.PP)) + "\n")
-
+		if len(scores) == 0 {
+			session.ChannelMessageSend(message.ChannelID, "Player " + player + " has not submitted scores in a while!")
+		} else {
+			session.ChannelMessageSend(message.ChannelID, "Player: " + player)
+			for _, score := range scores {
+				session.ChannelMessageSend(message.ChannelID, "Full Combo : " + strconv.FormatBool(bool(score.Score.FullCombo)))
+				session.ChannelMessageSend(message.ChannelID, "Map: https://osu.ppy.sh/b/" + strconv.Itoa(score.BeatmapID))
+				session.ChannelMessageSend(message.ChannelID, "Score : " + strconv.Itoa(int(score.Score.Score)))
+				session.ChannelMessageSend(message.ChannelID, "PP : " + strconv.Itoa(int(score.Score.PP)) + "\n")
+			}
 		}
 	}
 
 	if strings.HasPrefix(content, "go!status") {
-		website := args[1]
-		session.ChannelMessageSend(message.ChannelID, "Response Status: " + strings.ToUpper(GetStatus(website)))
+		if args[1] == "" {
+			session.ChannelMessageSend(message.ChannelID, "Response Status: " + strings.ToUpper(GetStatus("https://osu.ppy.sh")))
+		} else {
+			website := args[1]
+			session.ChannelMessageSend(message.ChannelID, "Response Status: " + strings.ToUpper(GetStatus(website)))
+		}
 	}
 }

@@ -1,17 +1,25 @@
 package main
 
 import (
-	"github.com/bwmarrin/discordgo"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
-	"syscall"
-	"strings"
-	"net/http"
 	"strconv"
-	osuapi "github.com/thehowl/go-osuapi"
+	"strings"
+	"syscall"
 
+	"github.com/bwmarrin/discordgo"
+	osuapi "github.com/thehowl/go-osuapi"
 )
+
+var (
+	scoreAmount string
+	BeatmapID   string
+	fullCombo   string
+	PP          string
+)
+
 func GetKey() string {
 	key := "" //insert your key here, has to have quotes around it.
 	return key
@@ -51,12 +59,18 @@ func main() {
 
 func GetStatus(s string) string {
 	resp, err := http.Get(s)
-    if err != nil {
-        panic(err)
+	if err != nil {
+		panic(err)
 	}
-	
+
 	return resp.Status
 }
+
+func OutputAll(player string, fullcombo string, scoreAmount string, beatmapid string, pp string) string {
+	output := "Player: " + player + "\nFull Combo: " + fullcombo + "\nScore: " + scoreAmount + "\nBeatmap: https://osu.ppy.sh/b/" + beatmapid + "\nPP: " + pp + "\n"
+	return output
+}
+
 // This function will be called (due to AddHandler above) every time a new
 // message is created on any channel that the authenticated bot has access to.
 func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate) {
@@ -66,7 +80,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 	if message.Author.ID == session.State.User.ID {
 		return
 	}
-	
+
 	if message.Content == "osu!" {
 		session.ChannelMessageSend(message.ChannelID, "Bad game B)")
 	}
@@ -76,30 +90,52 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		api := osuapi.NewClient(GetKey())
 		scores, err := api.GetUserRecent(osuapi.GetUserScoresOpts{
 			Username: player,
-			Mode: osuapi.ModeOsu,
+			Mode:     osuapi.ModeOsu,
+			Limit:    1,
 		})
 		if err != nil {
 			fmt.Println("what happened?")
 		}
 		if len(scores) == 0 {
-			session.ChannelMessageSend(message.ChannelID, "Player " + player + " has not submitted scores in a while!")
+			session.ChannelMessageSend(message.ChannelID, "Player "+player+" has not submitted scores in a while!")
 		} else {
-			session.ChannelMessageSend(message.ChannelID, "Player: " + player)
+			session.ChannelMessageSend(message.ChannelID, "Player: "+player)
 			for _, score := range scores {
-				session.ChannelMessageSend(message.ChannelID, "Full Combo : " + strconv.FormatBool(bool(score.Score.FullCombo)))
-				session.ChannelMessageSend(message.ChannelID, "Map: https://osu.ppy.sh/b/" + strconv.Itoa(score.BeatmapID))
-				session.ChannelMessageSend(message.ChannelID, "Score : " + strconv.Itoa(int(score.Score.Score)))
-				session.ChannelMessageSend(message.ChannelID, "PP : " + strconv.Itoa(int(score.Score.PP)) + "\n")
+				session.ChannelMessageSend(message.ChannelID, "Full Combo : "+strconv.FormatBool(bool(score.Score.FullCombo)))
+				session.ChannelMessageSend(message.ChannelID, "Map: "+strconv.Itoa(score.BeatmapID))
+				session.ChannelMessageSend(message.ChannelID, "Score : "+strconv.Itoa(int(score.Score.Score)))
+				session.ChannelMessageSend(message.ChannelID, "PP : "+strconv.Itoa(int(score.Score.PP))+"\n")
 			}
 		}
 	}
 
+	if strings.HasPrefix(content, "go!best") {
+		player := args[1]
+		api := osuapi.NewClient(GetKey())
+		scores, err := api.GetUserBest(osuapi.GetUserScoresOpts{
+			Username: player,
+			Mode:     osuapi.ModeOsu,
+			Limit:    2,
+		})
+		if err != nil {
+			fmt.Println("what happened?")
+		}
+
+		for _, score := range scores {
+			fullCombo = strconv.FormatBool(bool(score.Score.FullCombo))
+			BeatmapID = strconv.Itoa(score.BeatmapID)
+			scoreAmount = strconv.Itoa(int(score.Score.Score))
+			PP = strconv.Itoa(int(score.Score.PP))
+		}
+		session.ChannelMessageSend(message.ChannelID, OutputAll(player, fullCombo, scoreAmount, BeatmapID, PP))
+	}
+
 	if strings.HasPrefix(content, "go!status") {
-		if args[1] == "" {
-			session.ChannelMessageSend(message.ChannelID, "Response Status: " + strings.ToUpper(GetStatus("https://osu.ppy.sh")))
+		if len(args) < 2 {
+			session.ChannelMessageSend(message.ChannelID, "Response Status For osu!: "+strings.ToUpper(GetStatus("https://osu.ppy.sh")))
 		} else {
 			website := args[1]
-			session.ChannelMessageSend(message.ChannelID, "Response Status: " + strings.ToUpper(GetStatus(website)))
+			session.ChannelMessageSend(message.ChannelID, "Response Status: "+strings.ToUpper(GetStatus(website)))
 		}
 	}
 }

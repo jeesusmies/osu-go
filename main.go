@@ -4,6 +4,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"fmt"
 	"os"
+	"math"
 	"os/signal"
 	"syscall"
 	"strings"
@@ -72,7 +73,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 	}
 
 	if strings.HasPrefix(content, "go!recent") {
-		player := args[1]
+		player := "jeesusmies"
 		api := osuapi.NewClient(GetKey())
 		scores, err := api.GetUserRecent(osuapi.GetUserScoresOpts{
 			Username: player,
@@ -95,11 +96,38 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 	}
 
 	if strings.HasPrefix(content, "go!status") {
-		if args[1] == "" {
+		if len(args) < 2 {
 			session.ChannelMessageSend(message.ChannelID, "Response Status: " + strings.ToUpper(GetStatus("https://osu.ppy.sh")))
 		} else {
 			website := args[1]
 			session.ChannelMessageSend(message.ChannelID, "Response Status: " + strings.ToUpper(GetStatus(website)))
 		}
+	}
+
+	if strings.HasPrefix(content, "go!osu") {
+		player := ""
+		if len(args) < 2 { player = "jeesusmies" } else { player = args[1] }
+		api := osuapi.NewClient(GetKey())
+		stats, err := api.GetUser(osuapi.GetUserOpts{
+			Username: player,
+			Mode: osuapi.ModeOsu,
+		})
+
+		if err != nil { fmt.Println("err: %s", err) }
+		embed := &discordgo.MessageEmbed{
+			Author: &discordgo.MessageEmbedAuthor{},
+			Color: 0x00ff00,
+			Fields: []*discordgo.MessageEmbedField{
+				&discordgo.MessageEmbedField{
+					Name: "Statistics",
+					Value: fmt.Sprintf("**pp**: %d\n**rank**: #%d\n**level**: %f\n**accuracy**: %f ", int(math.Round(stats.PP)), stats.Rank, stats.Level, stats.Accuracy),
+				},
+			},
+		}
+		session.ChannelMessageSendEmbed(message.ChannelID, embed)
+	}
+
+	if strings.HasPrefix(content, "go!about") {
+		session.ChannelMessageSend(message.ChannelID, "**What is this?**\nThis is a Discord bot for a game called *osu!*, with features showing player stats, recent played maps and best scores.\n**Who made this?**\nMostly `Byte#0101`, with small contributions by `jeesusmies#0500.`")
 	}
 }

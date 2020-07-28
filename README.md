@@ -11,4 +11,8 @@ export DISCORD_TOKEN=discord token that you have
 export OSU_TOKEN=osu token that you have
 (WINDOWS)
 https://docs.oracle.com/en/database/oracle/r-enterprise/1.5.1/oread/creating-and-modifying-environment-variables-on-windows.html
+
+go build
+./osu-go
+no idea how to run the build on windows
 ```

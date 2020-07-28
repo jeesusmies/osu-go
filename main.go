@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"math"
 	"os/signal"
 	"strconv"
 	"strings"
@@ -90,28 +89,34 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 	}
 
 	if strings.HasPrefix(content, "go!recent") {
-		player := "jeesusmies"
+		player := args[1]
 		api := osuapi.NewClient(GetKey())
 		scores, err := api.GetUserRecent(osuapi.GetUserScoresOpts{
 			Username: player,
-			Mode:     osuapi.ModeOsu,
-			Limit:    10,
-		})
+			Mode: osuapi.ModeOsu,
+			Limit: 5,		})
 		if err != nil {
 			fmt.Println("what happened?")
 		}
 		if len(scores) == 0 {
 			session.ChannelMessageSend(message.ChannelID, "Player " + player + " has not submitted scores in a while!")
 		} else {
-			var pog string = ""
+			msg := ""
 			for _, score := range scores {
-				fullCombo = strconv.FormatBool(bool(score.Score.FullCombo))
-				BeatmapID = strconv.Itoa(score.BeatmapID)
-				scoreAmount = strconv.Itoa(int(score.Score.Score))
-				PP = strconv.Itoa(int(score.Score.PP))
-				pog = pog + OutputAll(fullCombo, scoreAmount, BeatmapID, PP)
+				msg = msg + fmt.Sprintf("**Map:** %d\n**Score**: %d | **PP**: %.2f\n\n", score.BeatmapID, score.Score.Score, score.Score.PP)
 			}
-			session.ChannelMessageSend(message.ChannelID, player + "\n" + pog)
+
+			embed := &discordgo.MessageEmbed{
+				Author: &discordgo.MessageEmbedAuthor{},
+				Color: 0xff69b4,
+				Fields: []*discordgo.MessageEmbedField{
+					&discordgo.MessageEmbedField{
+						Name: "recent scoret lol",
+						Value: msg,
+					},
+				},
+			}
+			session.ChannelMessageSendEmbed(message.ChannelID, embed)
 		}
 	}
 
@@ -156,15 +161,28 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 			Mode: osuapi.ModeOsu,
 		})
 
-		if err != nil { fmt.Println("err: %s", err) }
+		if err != nil { 
+			session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("err: %s", err))
+			return;
+		}
 		embed := &discordgo.MessageEmbed{
 			Author: &discordgo.MessageEmbedAuthor{},
-			Color: 0x00ff00,
+			Color: 0xff69b4,
 			Fields: []*discordgo.MessageEmbedField{
 				&discordgo.MessageEmbedField{
-					Name: "Statistics",
-					Value: fmt.Sprintf("**pp**: %d\n**rank**: #%d\n**level**: %f\n**accuracy**: %f ", int(math.Round(stats.PP)), stats.Rank, stats.Level, stats.Accuracy),
+					Name: fmt.Sprintf("%s\nCountry: %s", stats.Username, stats.Country),
+					Value: fmt.Sprintf("**pp**: %.2f\n**rank**: #%d (Country: #%d)\n**level**: %.2f\n**accuracy**: %.2f ", stats.PP, stats.Rank, stats.CountryRank, stats.Level, stats.Accuracy),
 				},
+			},
+			Footer: &discordgo.MessageEmbedFooter{
+				Text: "go!osu {user}",
+				IconURL: message.Author.AvatarURL(""),
+
+			},
+			Thumbnail: &discordgo.MessageEmbedThumbnail{
+				URL: "https://a.ppy.sh/" + strconv.Itoa(stats.UserID),
+				Width: 128,
+				Height: 128,
 			},
 		}
 		session.ChannelMessageSendEmbed(message.ChannelID, embed)

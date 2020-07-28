@@ -69,8 +69,8 @@ func GetStatus(s string) string {
 	return resp.Status
 }
 
-func OutputAll(player string, fullcombo string, scoreAmount string, beatmapid string, pp string) string {
-	output := "Player: " + player + "\nFull Combo: " + fullcombo + "\nScore: " + scoreAmount + "\nBeatmap: https://osu.ppy.sh/b/" + beatmapid + "\nPP: " + pp + "\n"
+func OutputAll(fullcombo string, scoreAmount string, beatmapid string, pp string) string {
+	output := "Full Combo: " + fullcombo + "\nScore: " + scoreAmount + "\nBeatmap: https://osu.ppy.sh/b/" + beatmapid + "\nPP: " + pp + "\n"
 	return output
 }
 
@@ -94,7 +94,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		scores, err := api.GetUserRecent(osuapi.GetUserScoresOpts{
 			Username: player,
 			Mode:     osuapi.ModeOsu,
-			Limit:    1,
+			Limit:    10,
 		})
 		if err != nil {
 			fmt.Println("what happened?")
@@ -102,13 +102,15 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		if len(scores) == 0 {
 			session.ChannelMessageSend(message.ChannelID, "Player " + player + " has not submitted scores in a while!")
 		} else {
+			var pog string = ""
 			for _, score := range scores {
 				fullCombo = strconv.FormatBool(bool(score.Score.FullCombo))
 				BeatmapID = strconv.Itoa(score.BeatmapID)
 				scoreAmount = strconv.Itoa(int(score.Score.Score))
 				PP = strconv.Itoa(int(score.Score.PP))
+				pog = pog + OutputAll(fullCombo, scoreAmount, BeatmapID, PP)
 			}
-			session.ChannelMessageSend(message.ChannelID, OutputAll(player, fullCombo, scoreAmount, BeatmapID, PP))
+			session.ChannelMessageSend(message.ChannelID, player + "\n" + pog)
 		}
 	}
 
@@ -118,18 +120,21 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		scores, err := api.GetUserBest(osuapi.GetUserScoresOpts{
 			Username: player,
 			Mode:     osuapi.ModeOsu,
+			Limit: 5,
 		})
 		if err != nil {
 			fmt.Println("what happened?")
 		}
-
+		var pog string = ""
 		for _, score := range scores {
 			fullCombo = strconv.FormatBool(bool(score.Score.FullCombo))
 			BeatmapID = strconv.Itoa(score.BeatmapID)
 			scoreAmount = strconv.Itoa(int(score.Score.Score))
 			PP = strconv.Itoa(int(score.Score.PP))
+			pog = pog + OutputAll(fullCombo, scoreAmount, BeatmapID, PP)
 		}
-		session.ChannelMessageSend(message.ChannelID, OutputAll(player, fullCombo, scoreAmount, BeatmapID, PP))
+		session.ChannelMessageSend(message.ChannelID, player + "\n" + pog)
+		
 	}
 
 	if strings.HasPrefix(content, "go!status") {

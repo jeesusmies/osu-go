@@ -100,7 +100,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 			fmt.Println("what happened?")
 		}
 		if len(scores) == 0 {
-			session.ChannelMessageSend(message.ChannelID, "Player "+player+" has not submitted scores in a while!")
+			session.ChannelMessageSend(message.ChannelID, "Player " + player + " has not submitted scores in a while!")
 		} else {
 			for _, score := range scores {
 				fullCombo = strconv.FormatBool(bool(score.Score.FullCombo))
@@ -114,12 +114,10 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 
 	if strings.HasPrefix(content, "go!best") {
 		player := args[1]
-		limit, err := strconv.Atoi(args[2])
 		api := osuapi.NewClient(GetKey())
 		scores, err := api.GetUserBest(osuapi.GetUserScoresOpts{
 			Username: player,
 			Mode:     osuapi.ModeOsu,
-			Limit: limit,
 		})
 		if err != nil {
 			fmt.Println("what happened?")

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"math"
 	"os/signal"
 	"strconv"
 	"strings"
@@ -21,7 +22,7 @@ var (
 )
 
 func GetKey() string {
-	key := os.Args[1] //insert your key here, has to have quotes around it.
+	key := os.Getenv("OSU_TOKEN") // env variable
 	if key == "" {
 		fmt.Println("Enter a key as first argument!")
 	}
@@ -29,7 +30,7 @@ func GetKey() string {
 }
 
 func BotInit() *discordgo.Session {
-	discord, err := discordgo.New("Bot " + os.Args[2])
+	discord, err := discordgo.New("Bot " + os.Getenv("DISCORD_TOKEN"))
 	if err != nil {
 		fmt.Println("Error initialising the bot!")
 	}
@@ -89,7 +90,7 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 	}
 
 	if strings.HasPrefix(content, "go!recent") {
-		player := args[1]
+		player := "jeesusmies"
 		api := osuapi.NewClient(GetKey())
 		scores, err := api.GetUserRecent(osuapi.GetUserScoresOpts{
 			Username: player,
@@ -144,5 +145,32 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 			website := args[1]
 			session.ChannelMessageSend(message.ChannelID, "Response Status: "+strings.ToUpper(GetStatus(website)))
 		}
+	}
+  
+	if strings.HasPrefix(content, "go!osu") {
+		player := ""
+		if len(args) < 2 { player = "jeesusmies" } else { player = args[1] }
+		api := osuapi.NewClient(GetKey())
+		stats, err := api.GetUser(osuapi.GetUserOpts{
+			Username: player,
+			Mode: osuapi.ModeOsu,
+		})
+
+		if err != nil { fmt.Println("err: %s", err) }
+		embed := &discordgo.MessageEmbed{
+			Author: &discordgo.MessageEmbedAuthor{},
+			Color: 0x00ff00,
+			Fields: []*discordgo.MessageEmbedField{
+				&discordgo.MessageEmbedField{
+					Name: "Statistics",
+					Value: fmt.Sprintf("**pp**: %d\n**rank**: #%d\n**level**: %f\n**accuracy**: %f ", int(math.Round(stats.PP)), stats.Rank, stats.Level, stats.Accuracy),
+				},
+			},
+		}
+		session.ChannelMessageSendEmbed(message.ChannelID, embed)
+	}
+
+	if strings.HasPrefix(content, "go!about") {
+		session.ChannelMessageSend(message.ChannelID, "**What is this?**\nThis is a Discord bot for a game called *osu!*, with features showing player stats, recent played maps and best scores.\n**Who made this?**\nMostly `Byte#0101`, with small contributions by `jeesusmies#0500.`")
 	}
 }

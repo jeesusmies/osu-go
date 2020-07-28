@@ -13,12 +13,12 @@ import (
 
 )
 func GetKey() string {
-	key := "" //insert your key here, has to have quotes around it.
+	key := os.Getenv("OSU_TOKEN") //insert your key here, has to have quotes around it.
 	return key
 }
 
 func BotInit() *discordgo.Session {
-	discord, err := discordgo.New("Bot " + "")
+	discord, err := discordgo.New("Bot " + os.Getenv("DISCORD_TOKEN"))
 	if err != nil {
 		fmt.Println("Error initialising the bot!")
 	}

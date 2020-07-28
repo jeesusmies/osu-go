@@ -21,12 +21,15 @@ var (
 )
 
 func GetKey() string {
-	key := "" //insert your key here, has to have quotes around it.
+	key := os.Args[1] //insert your key here, has to have quotes around it.
+	if key == "" {
+		fmt.Println("Enter a key as first argument!")
+	}
 	return key
 }
 
 func BotInit() *discordgo.Session {
-	discord, err := discordgo.New("Bot " + "")
+	discord, err := discordgo.New("Bot " + os.Args[2])
 	if err != nil {
 		fmt.Println("Error initialising the bot!")
 	}
@@ -99,23 +102,24 @@ func messageCreate(session *discordgo.Session, message *discordgo.MessageCreate)
 		if len(scores) == 0 {
 			session.ChannelMessageSend(message.ChannelID, "Player "+player+" has not submitted scores in a while!")
 		} else {
-			session.ChannelMessageSend(message.ChannelID, "Player: "+player)
 			for _, score := range scores {
-				session.ChannelMessageSend(message.ChannelID, "Full Combo : "+strconv.FormatBool(bool(score.Score.FullCombo)))
-				session.ChannelMessageSend(message.ChannelID, "Map: "+strconv.Itoa(score.BeatmapID))
-				session.ChannelMessageSend(message.ChannelID, "Score : "+strconv.Itoa(int(score.Score.Score)))
-				session.ChannelMessageSend(message.ChannelID, "PP : "+strconv.Itoa(int(score.Score.PP))+"\n")
+				fullCombo = strconv.FormatBool(bool(score.Score.FullCombo))
+				BeatmapID = strconv.Itoa(score.BeatmapID)
+				scoreAmount = strconv.Itoa(int(score.Score.Score))
+				PP = strconv.Itoa(int(score.Score.PP))
 			}
+			session.ChannelMessageSend(message.ChannelID, OutputAll(player, fullCombo, scoreAmount, BeatmapID, PP))
 		}
 	}
 
 	if strings.HasPrefix(content, "go!best") {
 		player := args[1]
+		limit, err := strconv.Atoi(args[2])
 		api := osuapi.NewClient(GetKey())
 		scores, err := api.GetUserBest(osuapi.GetUserScoresOpts{
 			Username: player,
 			Mode:     osuapi.ModeOsu,
-			Limit:    2,
+			Limit: limit,
 		})
 		if err != nil {
 			fmt.Println("what happened?")
